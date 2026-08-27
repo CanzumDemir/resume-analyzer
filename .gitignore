@@ -1,0 +1,36 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# virtuelle Umgebung
+.venv/
+venv/
+
+# Node dependencies (any level: root, frontend, etc.)
+node_modules/
+
+# Environment / Secret-Dateien
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+log.txt
+
+# Editor / IDE Dateien
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-spezifische Dateien
+.DS_Store
+Thumbs.db
+
+# Pytest cache
+.pytest_cache/
+
+# Optional: Pydantic, FastAPI, uvicorn temp files
+*.db   # falls SQLite genutzt wird
