@@ -108,13 +108,8 @@ export function useStoredAnalysis({
         setDetail(data);
         setError(null);
 
-        /*
-         * Solange die Analyse noch läuft,
-         * fragen wir das Backend erneut.
-         *
-         * completed / failed:
-         * kein weiterer Request.
-         */
+        // Keep polling while the analysis is still processing;
+        // completed/failed means no further request.
         if (data.status === "processing") {
           timeoutId = setTimeout(() => {
             void fetchAnalysis(false);
@@ -152,13 +147,7 @@ export function useStoredAnalysis({
 
     void fetchAnalysis(true);
 
-    /*
-     * Cleanup:
-     *
-     * Wenn die Route gewechselt oder
-     * die Component zerstört wird,
-     * brechen wir Fetch + Polling ab.
-     */
+    // Cleanup: cancel the fetch and stop polling on route change or unmount.
     return () => {
       cancelled = true;
 
@@ -174,11 +163,8 @@ export function useStoredAnalysis({
     pollIntervalMs,
   ]);
 
-  /*
-   * Verhindert, dass beim schnellen Wechsel
-   * zwischen zwei Analysen kurz Daten der
-   * vorherigen Analyse angezeigt werden.
-   */
+  // Avoids briefly showing the previous analysis's data when
+  // switching quickly between two analyses.
   const currentDetail =
     detail?.id === analysisId
       ? detail

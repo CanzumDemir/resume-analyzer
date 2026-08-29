@@ -23,14 +23,9 @@ export default function SideNavAnalyses() {
 
   const [analyses, setAnalyses] = useState<AnalysisListItem[]>([]);
 
-  /*
-   * Gespeicherte Analysen laden.
-   *
-   * `isStale` wird vom aufrufenden Effect übergeben,
-   * damit eine veraltete Response (Effect bereits
-   * erneut gelaufen oder Component unmounted) das
-   * Ergebnis eines neueren Fetches nicht überschreibt.
-   */
+  // `isStale` is passed in by the calling effect so a response that
+  // arrives after the effect re-ran (or the component unmounted)
+  // doesn't overwrite the result of a newer fetch.
   const fetchAnalyses = useCallback(async (isStale: () => boolean) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -60,9 +55,6 @@ export default function SideNavAnalyses() {
     }
   }, []);
 
-  /*
-   * Initiale History laden.
-   */
   useEffect(() => {
     let ignore = false;
 
@@ -78,10 +70,7 @@ export default function SideNavAnalyses() {
     };
   }, [fetchAnalyses]);
 
-  /*
-   * Wenn eine Live-Analyse fertig ist
-   * oder fehlschlägt, DB-State erneut laden.
-   */
+  // Reload the stored history once a live analysis finishes or fails.
   useEffect(() => {
     if (
       liveAnalysis.status !== "completed" &&
@@ -101,9 +90,6 @@ export default function SideNavAnalyses() {
     };
   }, [liveAnalysis.status, fetchAnalyses]);
 
-  /*
-   * Provider-Status auf Backend-Status mappen.
-   */
   const liveStatus: AnalysisListItem["status"] | null =
     liveAnalysis.status === "completed"
       ? "completed"
@@ -114,10 +100,6 @@ export default function SideNavAnalyses() {
           ? "processing"
           : null;
 
-  /*
-   * Aktuelle Live-Analyse in das Format
-   * unserer Sidebar-Liste bringen.
-   */
   const liveListItem: AnalysisListItem | null =
     liveAnalysis.id && liveStatus
       ? {
@@ -131,14 +113,8 @@ export default function SideNavAnalyses() {
         }
       : null;
 
-  /*
-   * Live-Analyse zuerst.
-   *
-   * Danach DB-History, wobei ein mögliches
-   * Duplikat der Live-Analyse entfernt wird.
-   *
-   * Anschließend maximal 10 Einträge anzeigen.
-   */
+  // Live analysis first, then the stored history with any duplicate
+  // of it filtered out, capped at MAX_RECENT_ANALYSES.
   const visibleAnalyses: AnalysisListItem[] = [
     ...(liveListItem ? [liveListItem] : []),
 

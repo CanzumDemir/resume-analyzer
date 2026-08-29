@@ -1,6 +1,5 @@
 import asyncio
 import os
-from time import perf_counter
 from collections.abc import AsyncIterator
 
 from dotenv import load_dotenv
@@ -131,8 +130,6 @@ async def stream_generate_resume_analysis(
         ),
         text_format=AIAnalysisOutput,
     ) as stream:
-        started_at = perf_counter()
-
         async for event in stream:
             if event.type == "response.refusal.delta":
                 raise RuntimeError("The model refused to analyze the resume.")
@@ -166,8 +163,6 @@ async def stream_generate_resume_analysis(
                 if field in partial_data and next_field in partial_data:
                     already_sent.add(field)
 
-                    print(f"[SEMANTIC {perf_counter() - started_at:.2f}s] {field}")
-
                     yield {
                         "type": field,
                         "value": partial_data[field],
@@ -179,8 +174,6 @@ async def stream_generate_resume_analysis(
 
         if result is None:
             raise RuntimeError("OpenAI returned no parsed analysis.")
-
-        print(f"[SEMANTIC {perf_counter() - started_at:.2f}s] FINAL_RESULT")
 
         result_dict = result.model_dump()
 

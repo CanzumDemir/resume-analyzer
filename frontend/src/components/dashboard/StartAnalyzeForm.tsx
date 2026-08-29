@@ -164,7 +164,7 @@ export default function StartAnalyzeForm() {
                         {cvFile && (
                             <div className="mt-4 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
                                 <p className="text-sm text-green-400 font-medium">
-                                    Ausgewählt: {cvFile.name}
+                                    Selected: {cvFile.name}
                                 </p>
                             </div>
                         )}
@@ -200,7 +200,7 @@ export default function StartAnalyzeForm() {
                                 onClick={handleCancel}
                                 className="flex-1 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition font-medium border border-gray-700"
                             >
-                                Abbrechen
+                                Cancel
                             </button>
 
                             <button
@@ -209,7 +209,7 @@ export default function StartAnalyzeForm() {
                                 disabled={!cvFile || !selectedModel}
                                 className="flex-1 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition font-semibold text-white shadow-lg"
                             >
-                                Weiter
+                                Next
                             </button>
                         </div>
                     </div>
@@ -258,7 +258,7 @@ export default function StartAnalyzeForm() {
                                 onClick={handleCancel}
                                 className="py-3 px-4 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition font-medium border border-gray-700"
                             >
-                                Abbrechen
+                                Cancel
                             </button>
 
                             <button
@@ -266,7 +266,7 @@ export default function StartAnalyzeForm() {
                                 onClick={() => setStep(1)}
                                 className="py-3 px-4 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition font-medium border border-gray-700"
                             >
-                                Zurück
+                                Back
                             </button>
 
                             <button

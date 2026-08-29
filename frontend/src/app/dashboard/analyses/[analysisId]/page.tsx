@@ -111,24 +111,12 @@ export default function AnalysisPage() {
     analysisId: string;
   }>();
 
-  /*
-   * Live-Daten aus unserem SSE Provider.
-   */
   const { analysis: streamAnalysis } = useAnalysisStream();
 
-  /*
-   * Ist die Analyse in der URL gerade
-   * die Analyse, die live gestreamt wird?
-   */
   const isLiveAnalysis = streamAnalysis.id === analysisId;
 
-  /*
-   * Wenn kein Live-Stream für diese ID existiert,
-   * laden wir den Zustand aus dem Backend.
-   *
-   * Der Hook kümmert sich auch um Polling,
-   * solange status === "processing".
-   */
+  // Falls back to polling the stored analysis whenever this page
+  // isn't the one currently being streamed (reload, direct link, etc.).
   const {
     detail: storedAnalysis,
     loading: storedLoading,
@@ -139,23 +127,12 @@ export default function AnalysisPage() {
     pollIntervalMs: 2000,
   });
 
-  /*
-   * Die eigentliche UI soll nicht wissen müssen,
-   * woher die Result-Daten kommen.
-   *
-   * Live:
-   * streamAnalysis.data
-   *
-   * Gespeichert:
-   * storedAnalysis.result
-   */
+  // The rendered UI doesn't need to know whether the data came from
+  // the live stream or from the database — just which one is current.
   const analysis: Partial<AnalysisResult> | null = isLiveAnalysis
     ? streamAnalysis.data
     : (storedAnalysis?.result ?? null);
 
-  /*
-   * Auch der Status kann aus zwei Quellen kommen.
-   */
   const status = isLiveAnalysis
     ? streamAnalysis.status
     : (storedAnalysis?.status ?? null);
@@ -167,9 +144,6 @@ export default function AnalysisPage() {
 
   const isFailed = status === "error" || status === "failed";
 
-  /*
-   * Fehler beim Laden aus dem Backend.
-   */
   if (!isLiveAnalysis && storedError) {
     return (
       <div className="flex min-h-full items-center justify-center bg-gray-950 p-8">
@@ -184,9 +158,6 @@ export default function AnalysisPage() {
     );
   }
 
-  /*
-   * Backend hat die Analyse als failed markiert.
-   */
   if (!isLiveAnalysis && isFailed) {
     return (
       <div className="flex min-h-full items-center justify-center bg-gray-950 p-8">
@@ -203,9 +174,6 @@ export default function AnalysisPage() {
     );
   }
 
-  /*
-   * Initialer API-Request läuft noch.
-   */
   if (!isLiveAnalysis && storedLoading && !storedAnalysis) {
     return <FullPageSkeleton />;
   }

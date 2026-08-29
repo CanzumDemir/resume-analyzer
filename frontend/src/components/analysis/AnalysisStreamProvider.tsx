@@ -56,12 +56,8 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  /*
-   * Wird nach dem "done"-Event aufgerufen.
-   *
-   * Der Stream-State ist für die Live-UI.
-   * Die Datenbank ist danach unsere endgültige Wahrheit.
-   */
+  // Called after the "done" event. The stream state is only for the
+  // live UI — the database is the source of truth once it's done.
   const fetchFinalAnalysis = useCallback(
     async (analysisId: string): Promise<AnalysisResult> => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -99,9 +95,7 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
 
   const startAnalysis = useCallback(
     async ({ resume, jobDescription, aiModel }: StartAnalysisInput) => {
-      /*
-       * Vorerst nur eine laufende Analyse gleichzeitig.
-       */
+      // Only one analysis running at a time, for now.
       if (analysis.status === "starting" || analysis.status === "streaming") {
         return;
       }
@@ -164,10 +158,8 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
 
         let buffer = "";
 
-        /*
-         * Lokale Variable ist wichtig:
-         * React-State Updates sind asynchron.
-         */
+        // Kept as a local variable rather than reading it back from
+        // state, since React state updates are asynchronous.
         let currentAnalysisId: string | null = null;
 
         while (true) {
@@ -181,15 +173,10 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
             stream: true,
           });
 
-          /*
-           * Ein SSE-Event endet mit einer Leerzeile.
-           */
+          // An SSE event ends with a blank line.
           const eventBlocks = buffer.split("\n\n");
 
-          /*
-           * Letzter Block kann noch
-           * unvollständig sein.
-           */
+          // The last block may still be incomplete.
           buffer = eventBlocks.pop() ?? "";
 
           for (const eventBlock of eventBlocks) {
@@ -197,10 +184,8 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
               continue;
             }
 
-            /*
-             * Unterstützt auch mehrere data:-Zeilen,
-             * falls wir später das SSE-Format erweitern.
-             */
+            // Handles multiple "data:" lines in case the SSE format
+            // is ever extended beyond a single line per event.
             const dataLines = eventBlock
               .split("\n")
               .filter((line) => line.startsWith("data:"))
@@ -214,12 +199,8 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
 
             const event = JSON.parse(jsonText);
 
-            console.log("Analysis stream event:", event);
-
             switch (event.type) {
-              /*
-               * Das MUSS das erste Backend-Event sein.
-               */
+              // This must be the first event the backend sends.
               case "analysis_created": {
                 const id = event.value?.analysis_id;
 
@@ -235,10 +216,7 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
                   status: "streaming",
                 }));
 
-                /*
-                 * Hier navigieren wir SOFORT.
-                 * Nicht erst nach dem Stream.
-                 */
+                // Navigate immediately, don't wait for the stream to finish.
                 router.push(`/dashboard/analyses/${id}`);
 
                 break;
@@ -353,10 +331,7 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
               }
 
               case "done": {
-                /*
-                 * Backend hat zu diesem Zeitpunkt
-                 * AnalysisResult committed.
-                 */
+                // The backend has committed the AnalysisResult by now.
                 if (!currentAnalysisId) {
                   throw new Error("Analysis completed without an ID.");
                 }
@@ -410,10 +385,7 @@ export function AnalysisStreamProvider({ children }: { children: ReactNode }) {
     [analysis.status, fetchFinalAnalysis, router],
   );
 
-  /*
-   * Wenn das komplette Dashboard
-   * verlassen wird, Request schließen.
-   */
+  // Abort the request if the dashboard is left entirely.
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
