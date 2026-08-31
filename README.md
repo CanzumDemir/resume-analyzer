@@ -1,153 +1,317 @@
 # AI Resume Analyzer
 
-A full-stack web app that analyzes a resume against a job description using OpenAI, and streams the results back to the browser live as they're generated.
+#### Video Demo: https://youtu.be/8yxHmGFsfac
 
-You upload a resume (PDF) and paste in a job description. The backend extracts the resume text, sends it to OpenAI with a structured output schema, and returns scores, strengths, gaps, missing keywords, and concrete recommendations — streamed field by field over SSE so the UI fills in progressively instead of showing a blank loading spinner.
+#### Description:
+
+AI Resume Analyzer is a full-stack web application that compares a PDF resume
+with a job description using the OpenAI API. It extracts the resume text,
+requests a schema-validated analysis, and streams completed result fields back
+to the browser. The result includes overall and ATS scores, five section scores,
+a summary, strengths, improvement areas, missing keywords, and prioritized
+recommendations.
+
+The application solves two practical problems. First, resume feedback is often
+generic and disconnected from a specific vacancy. This project analyzes the
+resume and job description together. Second, a complete AI response can take
+long enough that an ordinary request appears unresponsive. The application
+therefore sends structured fields to the interface as they become available
+instead of waiting to display the entire result.
+
+This repository is the public version of the project and contains everything
+needed for its implemented core workflow: account creation, login, PDF upload,
+analysis, live result display, persistence, and per-user analysis history. It
+does not depend on a separate private repository.
 
 ## Features
 
-- Email/password signup and login, JWT stored in an HttpOnly cookie
-- Upload a PDF resume and a job description, pick between three AI model presets (fast / standard / expert)
-- Live-streaming analysis: overall score, ATS score, five section scores (experience match, hard skills, education & certifications, achievements & impact, resume quality), a written summary, strengths, room for improvement, missing keywords, and prioritized recommendations
-- Analysis history in the sidebar, with status (processing / completed / failed) that keeps polling until it settles
-- Reloading or opening an analysis directly (not just right after creating it) loads the same result from the database instead of the live stream
-- Resume text extraction via Apache Tika
+- Email/password signup and login with Argon2 password hashing
+- JWT authentication in an HttpOnly cookie
+- PDF type, signature, and configurable size validation
+- Three validated OpenAI model presets: fast, standard, and expert
+- Resume comparison against a supplied job description
+- Structured OpenAI output validated by Pydantic/SQLModel
+- Field-by-field Server-Sent Events (SSE) over a POST request
+- PostgreSQL persistence for analyses and generated results
+- Per-user analysis history and ownership checks
+- Reloading and polling of stored in-progress or completed analyses
 
-The backend also has an endpoint to generate an improved version of the resume from a completed analysis (`/analyses/{id}/improve-resume`), but it isn't wired up in the frontend yet.
+The backend also exposes an authenticated endpoint that can generate and store
+an improved resume for a completed analysis. It is intentionally not exposed in
+the current frontend. The primary submitted workflow is resume analysis.
 
-## Tech stack
+## Technology
 
-**Backend:** FastAPI, SQLModel (SQLAlchemy + Pydantic), PostgreSQL, OpenAI Python SDK (`responses.stream` / `responses.parse` with structured outputs), Apache Tika for PDF text extraction, PyJWT + pwdlib for auth, Python 3.13.
+The backend uses Python 3.13, FastAPI, SQLModel, PostgreSQL, the OpenAI Python
+SDK, Apache Tika, PyJWT, and pwdlib with Argon2. The frontend uses Next.js 16,
+React 19, TypeScript, Tailwind CSS 4, and react-markdown. TypeScript API types
+are generated from FastAPI's OpenAPI schema.
 
-**Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, react-markdown. API types are generated from the backend's OpenAPI schema rather than hand-written.
+## Architecture and data flow
 
-## Architecture
+```text
+Browser ── POST PDF + job description ──▶ FastAPI
+                                               │
+                                      validate PDF and model
+                                               │
+                                      extract text with Tika
+                                               │
+                                  create processing Analysis row
+                                               │
+                              OpenAI structured Responses stream
+                                               │
+                     ◀── SSE events as complete fields appear ──
+                                               │
+                           save AnalysisResult and mark completed
 
+Browser ── GET /analyses/{id} ──▶ FastAPI ──▶ PostgreSQL
 ```
-Browser ──POST /stream_analyze_resume (multipart: PDF + job description)──▶ FastAPI
-                                                                                │
-                                                              extract text (Tika)
-                                                                                │
-                                                        create Analysis row (status=processing)
-                                                                                │
-                                                    OpenAI responses.stream (structured output)
-                                                                                │
-                                        ◀── SSE: one event per field as it finishes streaming ──
-                                                                                │
-                                                on completion: save AnalysisResult, status=completed
-Browser ──GET /analyses/{id} (poll while processing)─────────────────────▶ FastAPI ──▶ PostgreSQL
-```
 
-- The frontend never parses raw OpenAI output — the backend validates it against a Pydantic/SQLModel schema (`AIAnalysisOutput`) before anything is sent to the client or stored.
-- The SSE stream is consumed with `fetch` + `ReadableStream` (not `EventSource`), since starting an analysis requires a POST body (the file).
-- Once an analysis is created, its `Analysis` row is the source of truth. The stream is just a live view of one in-progress analysis — reloading the page, or opening an older analysis, reads the same data back from the database instead.
-- Auth is a JWT in an HttpOnly cookie, set by `/login` and `/signup`, read by a FastAPI dependency on every protected route. There's no session store — the cookie is fully self-contained.
+Each protected query includes the authenticated user's ID. Knowing another
+analysis UUID is therefore insufficient to read its analysis or generated
+outputs.
+
+## Design decisions
+
+### Fetch-based SSE
+
+The browser consumes the stream with `fetch` and `ReadableStream` rather than
+`EventSource`. `EventSource` is convenient for GET streams, but starting an
+analysis requires a multipart POST body containing the PDF, job description,
+and selected model. The frontend maintains a small SSE buffer so incomplete
+network chunks are not parsed too early.
+
+### Structured output and partial JSON
+
+The backend supplies `AIAnalysisOutput` as the OpenAI structured-output schema.
+While text deltas arrive, `pydantic_core.from_json(..., allow_partial=True)` is
+used to detect complete top-level fields. Only complete fields are sent to the
+browser. The final response is validated against the full schema before it is
+stored.
+
+### Database as the source of truth
+
+The live stream improves feedback during generation, but it is not permanent
+state. An `Analysis` row is created before the OpenAI request. The final
+`AnalysisResult` and completed status are committed together. On reload or when
+opening an older URL, the frontend reads the stored result instead of relying
+on stream state. Failed and cancelled analyses are marked as failed.
+
+### Authentication and browser security
+
+Passwords are stored only as Argon2 hashes. The signed JWT is stored in an
+HttpOnly cookie rather than local storage, so browser JavaScript cannot read it.
+SameSite and Secure behavior are configurable for local and deployed
+environments. CORS accepts explicit frontend origins rather than a wildcard.
+Queries that return user-owned content filter by both resource ID and user ID.
+
+### Output language
+
+There is no language selector. The analysis follows the primary language of the
+job description, or the resume when the job description has no clear primary
+language. Technical terms and official names remain unchanged where translation
+would reduce accuracy.
 
 ## Project structure
 
-```
+```text
 backend/app/
-  main.py               FastAPI app, router registration, exception handling
-  routes/                analyze, authentication, generate — thin, delegate to services
-  services/
-    ai_service.py         OpenAI calls (streaming + non-streaming)
-    analyze_service.py     orchestrates an analysis run, persists results
-    pdf_service.py          PDF -> text via Apache Tika
-    generate_service.py     "improve resume" generation
-  core/
-    database.py            all DB queries/inserts live here
-    security.py             password hashing, JWT issue/verify
-  models/                 SQLModel tables
-  schemas/                Pydantic request/response + OpenAI structured-output shapes
+  main.py                    FastAPI setup, CORS, routes, exception handler
+  core/config.py             browser-security and upload settings
+  core/database.py           engine, sessions, and database queries
+  core/security.py           password hashing, JWT validation, auth cookies
+  routes/authentication.py   signup, login, and logout
+  routes/analyze.py          stored and streaming/non-streaming analyses
+  routes/generate.py         improved-resume generation and retrieval
+  services/pdf_service.py    PDF validation and Apache Tika extraction
+  services/ai_service.py     OpenAI structured and streaming requests
+  services/analyze_service.py  persistence and failure handling
+  services/generate_service.py generated-output persistence
+  services/ai_prompts.py     analysis and improvement instructions
+  models/                    SQLModel database tables
+  schemas/                   HTTP, event, and AI output schemas
+  tests/                     auth, isolation, PDF, prompt, and SSE tests
 
 frontend/src/
-  app/                    Next.js App Router pages (landing, auth, dashboard)
-  components/
-    analysis/               SSE stream provider + score display
-    auth/                    login/signup forms
-    dashboard/               sidebar, analysis history, the "start analysis" wizard
-  hooks/useStoredAnalysis.ts  polls a stored analysis by id
-  types/api.d.ts            generated from the backend's OpenAPI schema
+  app/                       landing, authentication, dashboard, results
+  components/analysis/       stream state, SSE parser, result presentation
+  components/auth/           login and signup forms
+  components/dashboard/      analysis wizard, navigation, history
+  hooks/useStoredAnalysis.ts stored-analysis polling
+  types/api.d.ts             generated OpenAPI TypeScript definitions
 ```
 
 ## Screenshots
 
-**Landing page**
+### Landing page
+
 ![Landing page](docs/screenshots/01-landing-page.jpeg)
 
-**Start analysis**
+### Start analysis
+
 ![Start analysis](docs/screenshots/01-start-analysis.jpeg)
 
-**Analysis results — scores & summary**
-![Analysis results — scores](docs/screenshots/03-analysis-results-scores.jpeg)
+### Scores and summary
 
-**Analysis results — strengths & room for improvement**
-![Analysis results — strengths and improvements](docs/screenshots/04-analysis-results-details.jpeg)
+![Analysis scores](docs/screenshots/03-analysis-results-scores.jpeg)
 
-**Analysis results — missing keywords & recommendations**
-![Analysis results — keywords and recommendations](docs/screenshots/05-analysis-results-details.jpeg)
+### Strengths and improvement areas
 
-## Setup
+![Strengths and improvements](docs/screenshots/04-analysis-results-details.jpeg)
+
+### Missing keywords and recommendations
+
+![Keywords and recommendations](docs/screenshots/05-analysis-results-details.jpeg)
+
+## Local setup
 
 ### Prerequisites
 
 - Python 3.13
-- Node.js 20+
-- PostgreSQL running locally
-- Java on your PATH (Apache Tika launches a local server JAR on first use)
-- An OpenAI API key
+- Node.js 20 or later
+- PostgreSQL
+- Java on `PATH` for Apache Tika
+- An OpenAI API key with access to the configured models
+
+Create the PostgreSQL database named in `DATABASE_URL` before starting the API.
+SQLModel creates the tables, but it does not create the PostgreSQL database.
+Apache Tika may download its server JAR on first use, so the first PDF analysis
+can require internet access in addition to the OpenAI request.
 
 ### Backend
 
-```bash
+```powershell
 cd backend
 python -m venv .venv
-.venv/Scripts/activate        # macOS/Linux: source .venv/bin/activate
-
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-cp .env.example .env          # fill in your own values, see below
+Copy-Item .env.example .env
 uvicorn app.main:app --reload
 ```
 
-The API runs on `http://localhost:8000`.
+On macOS or Linux, activate with `source .venv/bin/activate` and copy the file
+with `cp .env.example .env`. The API runs at `http://localhost:8000`.
 
 ### Frontend
 
-```bash
+```powershell
 cd frontend
-npm install
-cp .env.example .env.local
+npm ci
+Copy-Item .env.example .env.local
 npm run dev
 ```
 
-The app runs on `http://localhost:3000`.
+On macOS or Linux, use `cp .env.example .env.local`. The browser application
+runs at `http://localhost:3000`.
 
-### Environment variables
+## Environment variables
 
-**`backend/.env`** (see `backend/.env.example`):
+Backend (`backend/.env`):
 
-| Variable | Description |
+| Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `OPENAI_API_KEY` | your OpenAI API key |
-| `OPENAI_MODEL` | default model id used when the frontend doesn't request a specific one |
-| `SECRET_KEY` | signing key for JWTs — generate a long random string |
-| `ALGORITHM` | JWT signing algorithm, e.g. `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | how long a login session lasts |
+| `DATABASE_URL` | PostgreSQL connection URL |
+| `OPENAI_API_KEY` | Secret OpenAI API key |
+| `OPENAI_MODEL` | Fallback model for calls without a selected model |
+| `SECRET_KEY` | Long random JWT signing secret |
+| `ALGORITHM` | JWT signing algorithm, normally `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Authentication cookie lifetime |
+| `CORS_ORIGINS` | Comma-separated allowed frontend origins |
+| `COOKIE_SECURE` | `true` for HTTPS; `false` for local HTTP |
+| `COOKIE_SAMESITE` | `lax`, `strict`, or `none`; `none` requires Secure |
+| `MAX_PDF_SIZE_MB` | Maximum PDF size processed by the application |
 
-**`frontend/.env.local`** (see `frontend/.env.example`):
+Frontend (`frontend/.env.local`):
 
-| Variable | Description |
+| Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | URL of the backend, e.g. `http://localhost:8000` |
+| `NEXT_PUBLIC_API_URL` | Backend URL, e.g. `http://localhost:8000` |
 
-Tables are created automatically on backend startup (`SQLModel.metadata.create_all`) — there's no separate migration step for a first run.
+Never commit `.env` or `.env.local`. Both are ignored by the repository.
 
-## Project status
+## Tests and generated API types
 
-This is a personal project, still evolving rather than a finished product. The core flow — sign up, analyze a resume against a job description, review the results — works end to end. A couple of things are intentionally left for later: there's no database migration tool yet (schema changes mean editing the SQLModel classes and recreating tables), the settings page is a placeholder, and the backend's "improve resume" endpoint doesn't have a frontend UI yet.
+Backend tests use an isolated in-memory SQLite database and do not call OpenAI
+or Apache Tika over the network:
 
-## What I built this to learn
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest -q
+```
 
-I wanted hands-on practice with streaming AI responses instead of a single request/response call — getting OpenAI's structured output to stream field-by-field over SSE, and keeping the frontend UI in sync with both a live stream and a database as the source of truth, was the main thing I was after. It also gave me a reason to build a full auth flow with HttpOnly cookies instead of just storing a token in localStorage, and to work with FastAPI's typed request/response models end-to-end into a generated TypeScript client.
+Frontend checks:
+
+```powershell
+cd frontend
+npm run lint
+npm run build
+```
+
+After changing FastAPI routes or schemas, start the backend and regenerate the
+frontend definitions:
+
+```powershell
+cd frontend
+npm run generate-api
+```
+
+## Privacy and security notes
+
+Resume text and job descriptions contain personal data. This application sends
+their text to the configured OpenAI API project and stores it in PostgreSQL.
+Use dummy documents for public demonstrations unless the person concerned has
+intentionally approved publication and processing. Production deployments must
+use HTTPS, a strong unique `SECRET_KEY`, `COOKIE_SECURE=true`, explicit CORS
+origins, protected database credentials, and appropriate OpenAI data controls.
+
+The application validates the declared PDF media type, the `%PDF-` signature,
+and a configurable size limit. These checks reduce accidental or abusive input,
+but they are not a malware scanner. Authentication also does not currently
+include rate limiting or account recovery.
+
+## Known limitations
+
+- Database tables are created directly from SQLModel metadata; there is no
+  migration system for schema upgrades.
+- The backend improved-resume endpoint has no frontend interface.
+- There is no delete-account or delete-analysis interface.
+- A deployed service would need operational controls such as rate limits,
+  monitoring, backups, and a formal privacy policy.
+
+These are intentionally documented limitations rather than unfinished features
+required for the submitted core workflow.
+
+## AI assistance and sources
+
+AI tools were used as development aids. The backend was predominantly developed
+by the project author, with later AI assistance for selected debugging, review,
+refactoring, and improvement work. The frontend received substantially more AI
+assistance, particularly for UI design, Tailwind CSS, styling, layout, and
+implementation details. The honest scope and limits of the available
+provenance, together with the confirmed 2026-08-30 OpenAI Codex
+submission-hardening pass, are documented in
+[AI_ASSISTANCE.md](AI_ASSISTANCE.md). Relevant source files also contain
+comments citing that assistance.
+
+Primary technical references include the
+[FastAPI documentation](https://fastapi.tiangolo.com/),
+[Next.js documentation](https://nextjs.org/docs),
+[SQLModel documentation](https://sqlmodel.tiangolo.com/),
+[Apache Tika documentation](https://tika.apache.org/), and the
+[OpenAI API documentation](https://developers.openai.com/api/docs/).
+
+## CS50x submission checklist
+
+Before submitting, the project author must:
+
+1. review and understand every submitted change;
+2. confirm that the public screenshots contain no unwanted personal data;
+3. record a final video of no more than three minutes with the required opening
+   information and upload it as public or unlisted, not private;
+4. replace the Video Demo TODO at the top of this file with its URL;
+5. submit the required CS50 form;
+6. run `submit50 cs50/problems/2026/x/project` from this directory; and
+7. open the CS50 gradebook afterward to confirm completion.
+
+The authoritative requirements are on the
+[CS50x 2026 Final Project page](https://cs50.harvard.edu/x/project/).

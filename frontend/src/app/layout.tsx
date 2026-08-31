@@ -1,3 +1,9 @@
+// AI assistance disclosure: AI tools were used extensively across the frontend
+// for UI design, Tailwind CSS, styling, layout, and implementation details. The
+// project author determined its overall structure and extensibility and
+// understands its backend integration. Exact historical line attribution is
+// unavailable.
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";

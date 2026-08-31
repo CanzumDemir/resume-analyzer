@@ -1,4 +1,9 @@
-// src/components/dashboard/SideNavLinks.tsx
+// AI assistance disclosure: AI tools assisted with frontend UI implementation,
+// styling, Tailwind CSS, layout, and implementation details during development.
+// Exact historical line-level provenance is unavailable; see AI_ASSISTANCE.md.
+//
+// AI assistance (2026-08-30): OpenAI Codex helped remove the unfinished
+// settings link during CS50 submission cleanup.
 
 "use client";
 
@@ -10,10 +15,6 @@ const links = [
   {
     name: "Dashboard",
     href: "/dashboard",
-  },
-  {
-    name: "Settings",
-    href: "/dashboard/settings",
   },
 ];
 

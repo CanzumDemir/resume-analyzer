@@ -1,3 +1,6 @@
+# AI assistance (2026-08-30): OpenAI Codex helped replace the unresolved
+# output-language placeholder with a document-language rule.
+
 RESUME_ANALYSIS_INSTRUCTIONS = """
 You are a senior resume analyst, technical recruiter, career strategist, and Applicant Tracking System specialist.
 
@@ -252,7 +255,8 @@ For `title`:
 
 ## LANGUAGE
 
-Write all human-readable content in the requested output language.
+Write all human-readable content in the primary language of the job description.
+If the job description has no clear primary language, use the primary language of the resume.
 
 Keep technical terms, technology names, certifications, and official job titles in their standard form when translating them would reduce accuracy.
 
@@ -295,9 +299,6 @@ Return exactly one object with exactly these fields:
 
 USER_INPUT_PROMPT = """
 Analyze the following resume using the supplied job description.
-
-Requested output language:
-{output_language}
 
 <RESUME>
 {resume_text}

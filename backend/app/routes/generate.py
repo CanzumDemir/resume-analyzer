@@ -1,3 +1,6 @@
+# AI assistance (2026-08-30): OpenAI Codex helped fix the generated-output
+# ownership check and model validation in this file.
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +14,7 @@ from app.core.database import (
 )
 from app.core.security import get_current_user
 from app.models.users import User
+from app.schemas.ai_model import AIModel
 from app.schemas.generated_output import GeneratedOutputRead
 from app.services.generate_service import run_improve_resume
 
@@ -24,7 +28,7 @@ router = APIRouter()
 )
 async def improve_analysis_resume(
     analysis_id: UUID,
-    ai_model: str | None = None,
+    ai_model: AIModel | None = None,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -71,14 +75,20 @@ async def generated_outputs(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
+    analysis = get_analysis_by_id_for_user(
+        session=session,
+        analysis_id=analysis_id,
+        user_id=current_user.id,
+    )
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found",
+        )
+
     generated_outputs = get_all_generated_outputs_by_analysis_id(
         session=session, analysis_id=analysis_id
     )
-
-    if generated_outputs is None:
-        raise HTTPException(
-            status_code=404,
-            detail="File not found",
-        )
 
     return generated_outputs

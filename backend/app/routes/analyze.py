@@ -1,4 +1,5 @@
-# backend/app/routes/analyze.py
+# AI assistance (2026-08-30): OpenAI Codex helped add server-side model
+# validation to these routes.
 
 import json
 from uuid import UUID
@@ -27,6 +28,7 @@ from app.models.users import User
 from app.schemas.analysis_detail import AnalysisDetailRead
 from app.schemas.analysis_list_item import AnalysisListItemRead
 from app.schemas.analysis_result import AnalysisResultRead
+from app.schemas.ai_model import AIModel
 from app.services.analyze_service import (
     run_resume_analysis,
     stream_run_resume_analysis,
@@ -116,8 +118,8 @@ def read_analysis(
 )
 async def analyze_resume(
     resume: UploadFile = File(...),
-    job_description: str = Form(...),
-    ai_model: str = Form(...),
+    job_description: str = Form(..., min_length=1, max_length=20_000),
+    ai_model: AIModel = Form(...),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -151,8 +153,8 @@ async def analyze_resume(
 )
 async def stream_analyze_resume(
     resume: UploadFile = File(...),
-    job_description: str = Form(...),
-    ai_model: str = Form(...),
+    job_description: str = Form(..., min_length=1, max_length=20_000),
+    ai_model: AIModel = Form(...),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):

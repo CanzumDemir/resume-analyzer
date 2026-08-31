@@ -1,3 +1,7 @@
+// AI assistance disclosure: AI tools assisted with frontend UI implementation,
+// styling, Tailwind CSS, layout, and implementation details during development.
+// Exact historical line-level provenance is unavailable; see AI_ASSISTANCE.md.
+
 import { ReactNode } from "react";
 
 import SideNav from "@/components/dashboard/SideNav";

@@ -1,5 +1,9 @@
 // src/components/dashboard/SideNav.tsx
 
+// AI assistance disclosure: AI tools assisted with frontend UI implementation,
+// styling, Tailwind CSS, layout, and implementation details during development.
+// Exact historical line-level provenance is unavailable; see AI_ASSISTANCE.md.
+
 "use client";
 
 import { useRouter } from "next/navigation";

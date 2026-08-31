@@ -1,3 +1,8 @@
+# AI assistance (2026-08-30): OpenAI Codex helped add explicit response models,
+# secure cookie helpers, and non-sensitive error responses.
+
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -11,18 +16,20 @@ from app.core.database import (
 )
 from app.core.security import (
     create_access_token,
-    get_current_user,
+    delete_access_token_cookie,
     hash_password,
+    set_access_token_cookie,
     verify_password,
 )
 from app.models.users import User
 from app.models.users_auth import UserAuth
-from app.schemas.user import UserSignup
+from app.schemas.user import MessageResponse, SignupResponse, UserSignup
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-@router.post("/signup", tags=["Signup"])
+@router.post("/signup", response_model=SignupResponse, tags=["Signup"])
 def signup(
     response: Response, user_data: UserSignup, session=Depends(get_session)
 ) -> dict:
@@ -56,19 +63,20 @@ def signup(
 
         access_token = create_access_token(data={"sub": str(new_user.id)})
 
-        response.set_cookie(key="access_token", value=access_token, httponly=True)
+        set_access_token_cookie(response, access_token)
 
         return {"user": new_user, "message": "Signed up user " + new_user.username}
-    except Exception as e:
+    except Exception:
         session.rollback()
+        logger.exception("User signup failed")
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
+            detail="Could not create user",
         )
 
 
-@router.post("/login", tags=["Login"])
+@router.post("/login", response_model=MessageResponse, tags=["Login"])
 def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -83,7 +91,11 @@ def login(
         )
 
     user_auth = get_user_auth(session, user.id)
-    if not user_auth or user_auth.provider != "local":
+    if (
+        not user_auth
+        or user_auth.provider != "local"
+        or not user_auth.password_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -96,13 +108,13 @@ def login(
         )
     access_token = create_access_token(data={"sub": str(user.id)})
 
-    response.set_cookie(key="access_token", value=access_token, httponly=True)
+    set_access_token_cookie(response, access_token)
 
     return {"message": "Login successful"}
 
 
-@router.post("/logout", tags=["Logout"])
-def logout(response: Response, current_user: User = Depends(get_current_user)):
-    response.delete_cookie(key="access_token")
+@router.post("/logout", response_model=MessageResponse, tags=["Logout"])
+def logout(response: Response):
+    delete_access_token_cookie(response)
 
     return {"message": "Logout successful"}

@@ -17,7 +17,7 @@ email-validator~=2.3.0     # required at runtime by pydantic's EmailStr
 openai~=2.32.0
 
 # Auth
-PyJWT~=2.12.1
+PyJWT~=2.13.0
 pwdlib[argon2]~=0.3.0
 
 # PDF text extraction
@@ -25,3 +25,7 @@ tika~=3.1.0
 
 # Config
 python-dotenv~=1.2.2
+
+# Tests
+httpx2~=2.12.0
+pytest~=9.0.2

@@ -1,9 +1,13 @@
+# AI assistance (2026-08-30): OpenAI Codex helped harden CORS configuration
+# and remove personal contact data from this file.
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.core.config import CORS_ORIGINS
 from app.core.database import create_db_and_tables
 from app.exceptions.exceptions import AIServiceException
 from app.routes import analyze, authentication, generate
@@ -19,7 +23,7 @@ app = FastAPI(
     title="Resume Analyzer API",
     description="API for analyzing resumes.",
     version="1.0",
-    contact={"name": "Can Demir", "email": "candemir_10@hotmail.com"},
+    contact={"name": "Can Demir"},
     lifespan=lifespan,
 )
 
@@ -34,10 +38,10 @@ async def ai_service_exception_handler(request: Request, exc: AIServiceException
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Accept", "Content-Type"],
 )
 
 app.include_router(analyze.router)

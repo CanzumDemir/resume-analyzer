@@ -32,5 +32,5 @@ Thumbs.db
 # Pytest cache
 .pytest_cache/
 
-# Optional: Pydantic, FastAPI, uvicorn temp files
-*.db   # falls SQLite genutzt wird
+# Local SQLite databases
+*.db

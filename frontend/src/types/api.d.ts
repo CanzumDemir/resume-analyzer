@@ -112,6 +112,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analyses/{analysis_id}/improve-resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Improve Analysis Resume */
+        post: operations["improve_analysis_resume_analyses__analysis_id__improve_resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analyses/{analysis_id}/generated-outputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Generated Outputs */
+        get: operations["generated_outputs_analyses__analysis_id__generated_outputs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -191,8 +242,11 @@ export interface components {
             resume: string;
             /** Job Description */
             job_description: string;
-            /** Ai Model */
-            ai_model: string;
+            /**
+             * Ai Model
+             * @enum {string}
+             */
+            ai_model: "gpt-5.6-luna" | "gpt-5.6-terra" | "gpt-5.6-sol";
         };
         /** Body_login_login_post */
         Body_login_login_post: {
@@ -224,13 +278,51 @@ export interface components {
             resume: string;
             /** Job Description */
             job_description: string;
-            /** Ai Model */
-            ai_model: string;
+            /**
+             * Ai Model
+             * @enum {string}
+             */
+            ai_model: "gpt-5.6-luna" | "gpt-5.6-terra" | "gpt-5.6-sol";
+        };
+        /** GeneratedOutputRead */
+        GeneratedOutputRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Analysis Id
+             * Format: uuid
+             */
+            analysis_id: string;
+            /**
+             * Output Type
+             * @enum {string}
+             */
+            output_type: "improved_resume" | "cover_letter" | "professional_summary";
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** MessageResponse */
+        MessageResponse: {
+            /** Message */
+            message: string;
         };
         /** SectionScores */
         SectionScores: {
@@ -245,13 +337,23 @@ export interface components {
             /** Resume Quality */
             resume_quality: number;
         };
-        /** User */
-        User: {
+        /** SignupResponse */
+        SignupResponse: {
+            /** Message */
+            message: string;
+            user: components["schemas"]["UserRead"];
+        };
+        /** UserRead */
+        UserRead: {
             /**
              * Id
              * Format: uuid
              */
-            id?: string;
+            id: string;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
             /** Username */
             username: string;
             /**
@@ -259,20 +361,6 @@ export interface components {
              * Format: email
              */
             email: string;
-            /** First Name */
-            first_name: string;
-            /** Last Name */
-            last_name: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at?: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at?: string;
         };
         /** UserSignup */
         UserSignup: {
@@ -317,7 +405,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -330,6 +420,15 @@ export interface operations {
                     "application/json": components["schemas"]["AnalysisListItemRead"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     read_analysis_analyses__analysis_id__get: {
@@ -339,7 +438,9 @@ export interface operations {
             path: {
                 analysis_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -368,7 +469,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -401,7 +504,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -448,7 +553,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["SignupResponse"];
                 };
             };
             /** @description Validation Error */
@@ -481,7 +586,95 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+        };
+    };
+    improve_analysis_resume_analyses__analysis_id__improve_resume_post: {
+        parameters: {
+            query?: {
+                ai_model?: ("gpt-5.6-luna" | "gpt-5.6-terra" | "gpt-5.6-sol") | null;
+            };
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedOutputRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generated_outputs_analyses__analysis_id__generated_outputs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedOutputRead"][];
                 };
             };
             /** @description Validation Error */

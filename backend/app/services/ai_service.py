@@ -1,3 +1,6 @@
+# AI assistance (2026-08-30): OpenAI Codex helped replace a malformed
+# validation-error message with a stable client-safe response.
+
 import asyncio
 import os
 from collections.abc import AsyncIterator
@@ -93,7 +96,7 @@ async def generate_resume_analysis(
         except ValidationError as e:
             raise AIServiceException(
                 status_code=400,
-                message="Validation error: {e}",
+                message="The AI response could not be validated.",
             ) from e
 
     raise AIServiceException(
