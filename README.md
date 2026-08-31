@@ -1,7 +1,5 @@
 # AI Resume Analyzer
 
-#### Video Demo: https://youtu.be/8yxHmGFsfac
-
 #### Description:
 
 AI Resume Analyzer is a full-stack web application that compares a PDF resume
@@ -18,10 +16,11 @@ long enough that an ordinary request appears unresponsive. The application
 therefore sends structured fields to the interface as they become available
 instead of waiting to display the entire result.
 
-This repository is the public version of the project and contains everything
-needed for its implemented core workflow: account creation, login, PDF upload,
-analysis, live result display, persistence, and per-user analysis history. It
-does not depend on a separate private repository.
+## Project status
+
+This repository contains the public CS50x version of AI Resume Analyzer.
+It represents an earlier stage of the project and was published as part of my CS50x final project. Development has continued privately since then, and the current version has evolved significantly in terms of architecture, security, reliability, and functionality.
+This repository is therefore mainly kept as a public snapshot of the project at the time of the CS50x submission.
 
 ## Features
 
@@ -269,7 +268,7 @@ and a configurable size limit. These checks reduce accidental or abusive input,
 but they are not a malware scanner. Authentication also does not currently
 include rate limiting or account recovery.
 
-## Known limitations
+## Known limitations of this version
 
 - Database tables are created directly from SQLModel metadata; there is no
   migration system for schema upgrades.
@@ -280,6 +279,15 @@ include rate limiting or account recovery.
 
 These are intentionally documented limitations rather than unfinished features
 required for the submitted core workflow.
+
+## Project status
+
+This repository contains the public CS50x version of AI Resume Analyzer.
+
+It represents an earlier stage of the project and was published as part of my CS50x final project. Development has continued privately since then, and the current version has evolved significantly in terms of architecture, security, reliability, and functionality.
+
+This repository is therefore mainly kept as a public snapshot of the project at the time of the CS50x submission.
+
 
 ## AI assistance and sources
 
@@ -300,18 +308,3 @@ Primary technical references include the
 [Apache Tika documentation](https://tika.apache.org/), and the
 [OpenAI API documentation](https://developers.openai.com/api/docs/).
 
-## CS50x submission checklist
-
-Before submitting, the project author must:
-
-1. review and understand every submitted change;
-2. confirm that the public screenshots contain no unwanted personal data;
-3. record a final video of no more than three minutes with the required opening
-   information and upload it as public or unlisted, not private;
-4. replace the Video Demo TODO at the top of this file with its URL;
-5. submit the required CS50 form;
-6. run `submit50 cs50/problems/2026/x/project` from this directory; and
-7. open the CS50 gradebook afterward to confirm completion.
-
-The authoritative requirements are on the
-[CS50x 2026 Final Project page](https://cs50.harvard.edu/x/project/).
